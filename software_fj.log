@@ -1,0 +1,103 @@
+2026-11-21 00:56:34 | INFO     | ===== Sistema Software FJ iniciado =====
+2026-11-21 00:56:34 | INFO     | Cliente registrado: CLI-001 - Ana Maria Torres
+2026-11-21 00:56:34 | INFO     | Op 01 'Registrar cliente valido (Ana)' completada
+2026-11-21 00:56:34 | INFO     | Op 01 finalizada (exitosas: 1, fallidas: 0)
+2026-11-21 00:56:34 | INFO     | Cliente registrado: CLI-002 - Carlos Pertuz
+2026-11-21 00:56:34 | INFO     | Op 02 'Registrar cliente valido (Carlos)' completada
+2026-11-21 00:56:34 | INFO     | Op 02 finalizada (exitosas: 2, fallidas: 0)
+2026-11-21 00:56:34 | ERROR    | Op 03 'Registrar cliente con numeros en el nombre' -> ClienteInvalidoError: [FJ-110] El nombre 'Luis 123' no es valido (solo letras, minimo 3)
+2026-11-21 00:56:34 | INFO     | Op 03 finalizada (exitosas: 2, fallidas: 1)
+2026-11-21 00:56:34 | ERROR    | Op 04 'Registrar cliente sin correo' -> ParametroFaltanteError: [FJ-101] Falta el dato obligatorio 'correo' del cliente
+2026-11-21 00:56:34 | INFO     | Op 04 finalizada (exitosas: 2, fallidas: 2)
+2026-11-21 00:56:34 | ERROR    | Op 05 'Registrar cliente con correo mal escrito' -> ClienteInvalidoError: [FJ-110] El correo 'pedro.correo.com' no tiene un formato valido
+2026-11-21 00:56:34 | INFO     | Op 05 finalizada (exitosas: 2, fallidas: 3)
+2026-11-21 00:56:34 | ERROR    | Op 06 'Registrar cliente con documento repetido' -> OperacionNoPermitidaError: [FJ-400] Ya existe un cliente con el documento ******8912
+2026-11-21 00:56:34 | INFO     | Op 06 finalizada (exitosas: 2, fallidas: 4)
+2026-11-21 00:56:34 | INFO     | Servicio agregado: SRV-001 - Sala Caribe
+2026-11-21 00:56:34 | INFO     | Op 07 'Crear servicio de sala' completada
+2026-11-21 00:56:34 | INFO     | Op 07 finalizada (exitosas: 3, fallidas: 4)
+2026-11-21 00:56:34 | INFO     | Servicio agregado: SRV-002 - Portatiles Core i7
+2026-11-21 00:56:34 | INFO     | Op 08 'Crear servicio de alquiler de equipos' completada
+2026-11-21 00:56:34 | INFO     | Op 08 finalizada (exitosas: 4, fallidas: 4)
+2026-11-21 00:56:34 | INFO     | Servicio agregado: SRV-003 - Asesoria en ciberseguridad
+2026-11-21 00:56:34 | INFO     | Op 09 'Crear servicio de asesoria' completada
+2026-11-21 00:56:34 | INFO     | Op 09 finalizada (exitosas: 5, fallidas: 4)
+2026-11-21 00:56:34 | ERROR    | Op 10 'Crear servicio con tarifa negativa' -> ServicioInvalidoError: [FJ-120] La tarifa -30000 debe ser mayor que cero
+2026-11-21 00:56:34 | INFO     | Op 10 finalizada (exitosas: 5, fallidas: 5)
+2026-11-21 00:56:34 | ERROR    | Op 11 'Crear asesoria con nivel inexistente' -> ServicioInvalidoError: [FJ-120] El nivel 'master' no existe, use: basico, intermedio, experto
+2026-11-21 00:56:34 | INFO     | Op 11 finalizada (exitosas: 5, fallidas: 6)
+2026-11-21 00:56:34 | ERROR    | Op 12 'Crear alquiler con tarifa en texto' -> ServicioInvalidoError: [FJ-120] La tarifa debe ser numerica, se recibio 'cincuenta mil'
+2026-11-21 00:56:34 | INFO     | Op 12 finalizada (exitosas: 5, fallidas: 7)
+2026-11-21 00:56:34 | INFO     | Op 13 'Cotizar 2 unidades de cada servicio (polimorfismo)' completada
+2026-11-21 00:56:34 | INFO     | Op 13 finalizada (exitosas: 6, fallidas: 7)
+2026-11-21 00:56:34 | INFO     | Op 14 'Calcular costo de asesoria con 3 variantes (sobrecarga)' completada
+2026-11-21 00:56:34 | INFO     | Op 14 finalizada (exitosas: 7, fallidas: 7)
+2026-11-21 00:56:34 | INFO     | Reserva RES-001 creada para CLI-001 en SRV-001 (3)
+2026-11-21 00:56:34 | INFO     | Reserva RES-001 confirmada por $176,715.00
+2026-11-21 00:56:34 | INFO     | Reserva RES-001 lista para pago
+2026-11-21 00:56:34 | INFO     | Op 15 'Reserva exitosa de sala (3 horas, con IVA)' completada
+2026-11-21 00:56:34 | INFO     | Op 15 finalizada (exitosas: 8, fallidas: 7)
+2026-11-21 00:56:34 | INFO     | Reserva RES-002 creada para CLI-002 en SRV-002 (7)
+2026-11-21 00:56:34 | INFO     | Reserva RES-002 confirmada por $1,349,460.00
+2026-11-21 00:56:34 | INFO     | Reserva RES-002 lista para pago
+2026-11-21 00:56:34 | INFO     | Op 16 'Reserva exitosa de equipos (7 dias, IVA y 10% de descuento)' completada
+2026-11-21 00:56:34 | INFO     | Op 16 finalizada (exitosas: 9, fallidas: 7)
+2026-11-21 00:56:34 | ERROR    | Op 17 'Reserva de asesoria por 20 horas (fuera de rango)' -> ReservaInvalidaError: [FJ-300] Duracion no valida para 'Asesoria en ciberseguridad' | causa: ServicioInvalidoError: [FJ-120] La duracion 20 horas esta fuera del rango (0.5 a 8)
+2026-11-21 00:56:34 | INFO     | Op 17 finalizada (exitosas: 9, fallidas: 8)
+2026-11-21 00:56:34 | ERROR    | Op 18 'Reserva de equipos por 2.5 dias (no son dias completos)' -> ReservaInvalidaError: [FJ-300] Duracion no valida para 'Portatiles Core i7' | causa: ServicioInvalidoError: [FJ-120] El alquiler es por dias completos, se recibio 2.5
+2026-11-21 00:56:34 | INFO     | Op 18 finalizada (exitosas: 9, fallidas: 9)
+2026-11-21 00:56:34 | ERROR    | Op 19 'Reserva con un cliente que no esta registrado' -> ReservaInvalidaError: [FJ-300] 'Cliente Fantasma' no es un cliente registrado
+2026-11-21 00:56:34 | INFO     | Op 19 finalizada (exitosas: 9, fallidas: 10)
+2026-11-21 00:56:34 | ERROR    | Op 20 'Reserva sin indicar la duracion' -> ParametroFaltanteError: [FJ-101] La reserva necesita cliente, servicio y duracion
+2026-11-21 00:56:34 | INFO     | Op 20 finalizada (exitosas: 9, fallidas: 11)
+2026-11-21 00:56:34 | INFO     | Reserva RES-003 creada para CLI-002 en SRV-003 (2)
+2026-11-21 00:56:34 | WARNING  | Fallo la confirmacion de RES-003: [FJ-500] El descuento 1.5 debe estar entre 0 y 0.99
+2026-11-21 00:56:34 | INFO     | Reserva RES-003 cancelada. Motivo: fallo en la confirmacion
+2026-11-21 00:56:34 | ERROR    | Op 21 'Reserva con descuento del 150% (calculo inconsistente)' -> ReservaInvalidaError: [FJ-300] No se pudo confirmar la reserva RES-003 | causa: CalculoInconsistenteError: [FJ-500] El descuento 1.5 debe estar entre 0 y 0.99
+2026-11-21 00:56:34 | INFO     | Op 21 finalizada (exitosas: 9, fallidas: 12)
+2026-11-21 00:56:34 | INFO     | Servicio SRV-001 ahora NO disponible
+2026-11-21 00:56:34 | INFO     | Op 22 'Poner la sala fuera de servicio' completada
+2026-11-21 00:56:34 | INFO     | Op 22 finalizada (exitosas: 10, fallidas: 12)
+2026-11-21 00:56:34 | INFO     | Reserva RES-004 creada para CLI-002 en SRV-001 (2)
+2026-11-21 00:56:34 | WARNING  | Fallo la confirmacion de RES-004: [FJ-200] El servicio 'Sala Caribe' no esta disponible en este momento
+2026-11-21 00:56:34 | INFO     | Reserva RES-004 cancelada. Motivo: fallo en la confirmacion
+2026-11-21 00:56:34 | ERROR    | Op 23 'Reservar la sala que no esta disponible' -> ReservaInvalidaError: [FJ-300] No se pudo confirmar la reserva RES-004 | causa: ServicioNoDisponibleError: [FJ-200] El servicio 'Sala Caribe' no esta disponible en este momento
+2026-11-21 00:56:34 | INFO     | Op 23 finalizada (exitosas: 10, fallidas: 13)
+2026-11-21 00:56:34 | INFO     | Servicio SRV-001 ahora disponible
+2026-11-21 00:56:34 | INFO     | Op 24 'Volver a habilitar la sala' completada
+2026-11-21 00:56:34 | INFO     | Op 24 finalizada (exitosas: 11, fallidas: 13)
+2026-11-21 00:56:34 | INFO     | Intento de pago registrado para RES-001
+2026-11-21 00:56:34 | ERROR    | Op 25 'Pagar reserva con texto en vez de numero' -> DatoInvalidoError: [FJ-100] El pago 'doscientos mil' no es un valor numerico | causa: ValueError: could not convert string to float: 'doscientos mil'
+2026-11-21 00:56:34 | INFO     | Op 25 finalizada (exitosas: 11, fallidas: 14)
+2026-11-21 00:56:34 | INFO     | Intento de pago registrado para RES-001
+2026-11-21 00:56:34 | ERROR    | Op 26 'Pagar reserva con dinero insuficiente' -> CalculoInconsistenteError: [FJ-500] Pago insuficiente: se pago $50,000.00 y el costo es $176,715.00
+2026-11-21 00:56:34 | INFO     | Op 26 finalizada (exitosas: 11, fallidas: 15)
+2026-11-21 00:56:34 | INFO     | Intento de pago registrado para RES-001
+2026-11-21 00:56:34 | INFO     | Reserva RES-001 procesada. Cambio: $23,285.00
+2026-11-21 00:56:34 | INFO     | Op 27 'Pagar reserva con el valor correcto' completada
+2026-11-21 00:56:34 | INFO     | Op 27 finalizada (exitosas: 12, fallidas: 15)
+2026-11-21 00:56:34 | ERROR    | Op 28 'Cancelar una reserva que ya fue pagada' -> OperacionNoPermitidaError: [FJ-400] La reserva RES-001 ya esta PROCESADA, no se puede cancelar
+2026-11-21 00:56:34 | INFO     | Op 28 finalizada (exitosas: 12, fallidas: 16)
+2026-11-21 00:56:34 | INFO     | Intento de pago registrado para RES-002
+2026-11-21 00:56:34 | INFO     | Reserva RES-002 procesada. Cambio: $0.00
+2026-11-21 00:56:34 | INFO     | Op 29 'Pagar reserva de equipos' completada
+2026-11-21 00:56:34 | INFO     | Op 29 finalizada (exitosas: 13, fallidas: 16)
+2026-11-21 00:56:34 | INFO     | Reserva RES-005 creada para CLI-001 en SRV-003 (1.5)
+2026-11-21 00:56:34 | INFO     | Op 30 'Dejar una reserva de asesoria pendiente' completada
+2026-11-21 00:56:34 | INFO     | Op 30 finalizada (exitosas: 14, fallidas: 16)
+2026-11-21 00:56:34 | ERROR    | Op 31 'Pagar una reserva que no esta confirmada' -> OperacionNoPermitidaError: [FJ-400] La reserva RES-005 esta PENDIENTE, primero debe confirmarse
+2026-11-21 00:56:34 | INFO     | Op 31 finalizada (exitosas: 14, fallidas: 17)
+2026-11-21 00:56:34 | INFO     | Reserva RES-005 cancelada. Motivo: cambio de fecha
+2026-11-21 00:56:34 | INFO     | Op 32 'Cancelar la reserva pendiente' completada
+2026-11-21 00:56:34 | INFO     | Op 32 finalizada (exitosas: 15, fallidas: 17)
+2026-11-21 00:56:34 | ERROR    | Op 33 'Confirmar una reserva que ya fue cancelada' -> OperacionNoPermitidaError: [FJ-400] No se puede confirmar RES-005 porque esta CANCELADA
+2026-11-21 00:56:34 | INFO     | Op 33 finalizada (exitosas: 15, fallidas: 18)
+2026-11-21 00:56:34 | INFO     | Op 34 'Buscar cliente por documento (numero)' completada
+2026-11-21 00:56:34 | INFO     | Op 34 finalizada (exitosas: 16, fallidas: 18)
+2026-11-21 00:56:34 | INFO     | Op 35 'Buscar cliente por id (texto)' completada
+2026-11-21 00:56:34 | INFO     | Op 35 finalizada (exitosas: 17, fallidas: 18)
+2026-11-21 00:56:34 | ERROR    | Op 36 'Buscar cliente con un dato decimal' -> DatoInvalidoError: [FJ-100] No se puede buscar un cliente con un dato de tipo float
+2026-11-21 00:56:34 | INFO     | Op 36 finalizada (exitosas: 17, fallidas: 19)
+2026-11-21 00:56:34 | CRITICAL | Op 37 'Consultar una posicion que no existe en la lista' -> error no previsto IndexError: list index out of range
+2026-11-21 00:56:34 | INFO     | Op 37 finalizada (exitosas: 17, fallidas: 20)
+2026-11-21 00:56:34 | INFO     | ===== Fin de la simulacion: 17 exitosas, 20 fallidas =====
