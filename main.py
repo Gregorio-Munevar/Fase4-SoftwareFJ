@@ -376,3 +376,221 @@ class Asesoria(Servicio):   # tercer servicio especializado, hereda de Servicio
         # devuelve el texto armado
         return (f"Asesoria {self.id}: {self.nombre} - {self.especialidad} (nivel {self.nivel}) "
                 f"${self.tarifa_base:,.0f}/hora - {estado}")
+
+
+# =====================================================================
+# PARTE 4 - Clase Reserva y gestor del sistema
+# =====================================================================
+
+class Reserva(Entidad):   # Reserva hereda de Entidad y une cliente + servicio
+    """Une un cliente, un servicio y una duracion, y maneja su estado."""
+    ESTADOS = ("PENDIENTE", "CONFIRMADA", "CANCELADA", "PROCESADA")   # estados posibles de una reserva
+
+    def __init__(self, cliente, servicio, duracion):   # constructor de la reserva
+        if cliente is None or servicio is None or duracion is None:   # los tres datos son obligatorios
+            # se lanza la excepcion ParametroFaltanteError
+            raise ParametroFaltanteError("La reserva necesita cliente, servicio y duracion")
+        if not isinstance(cliente, Cliente):     # el cliente debe ser un objeto Cliente
+            # se lanza la excepcion ReservaInvalidaError
+            raise ReservaInvalidaError(f"'{cliente}' no es un cliente registrado")
+        if not isinstance(servicio, Servicio):   # el servicio debe ser un objeto Servicio
+            # se lanza la excepcion ReservaInvalidaError
+            raise ReservaInvalidaError(f"'{servicio}' no es un servicio valido")
+        try:   # bloque que puede generar errores
+            servicio.validar_parametros(duracion)    # se valida la duracion segun el tipo de servicio
+        except (ServicioInvalidoError, ParametroFaltanteError) as error:   # si la duracion no sirve
+            raise ReservaInvalidaError(                              # se lanza un error de reserva...
+                f"Duracion no valida para '{servicio.nombre}'") from error   # ...encadenado con la causa original
+        self._cliente = cliente              # cliente de la reserva
+        self._servicio = servicio            # servicio reservado
+        self._duracion = duracion            # horas o dias segun el servicio
+        self._estado = "PENDIENTE"           # toda reserva nace pendiente
+        self._costo = None                   # el costo se calcula al confirmar
+        super().__init__("RES")              # id de la reserva, ej: RES-001
+        # se registra el evento en el log
+        logger.info(f"Reserva {self.id} creada para {cliente.id} en {servicio.id} ({duracion})")
+
+    @property   # decorador: el metodo se usa como atributo (getter)
+    def estado(self):                        # estado actual (solo lectura desde afuera)
+        return self._estado   # devuelve el valor del atributo protegido
+
+    @property   # decorador: el metodo se usa como atributo (getter)
+    def costo(self):                         # costo final (solo lectura)
+        return self._costo   # devuelve el valor del atributo protegido
+
+    def confirmar(self, impuesto=True, descuento=0.0):   # confirma la reserva, por defecto con IVA y sin descuento
+        """Confirma la reserva y calcula el costo. Usa try / except / else."""
+        if self._estado != "PENDIENTE":      # solo se confirman reservas pendientes
+            # se lanza la excepcion OperacionNoPermitidaError
+            raise OperacionNoPermitidaError(f"No se puede confirmar {self.id} porque esta {self._estado}")
+        try:   # bloque que puede generar errores
+            self._servicio.verificar_disponibilidad()    # puede lanzar ServicioNoDisponibleError
+            costo = self._servicio.calcular_costo(self._duracion, impuesto, descuento)   # puede lanzar CalculoInconsistenteError
+        except (ServicioNoDisponibleError, CalculoInconsistenteError) as error:   # si algo fallo
+            logger.warning(f"Fallo la confirmacion de {self.id}: {error}")       # se deja registro
+            raise ReservaInvalidaError(f"No se pudo confirmar la reserva {self.id}") from error   # encadenamiento
+        else:                                # solo entra aqui si no hubo ningun error
+            self._costo = costo              # se guarda el costo calculado
+            self._estado = "CONFIRMADA"      # se cambia el estado
+            logger.info(f"Reserva {self.id} confirmada por ${costo:,.2f}")   # se registra el evento en el log
+            return costo                     # se devuelve el costo
+
+    def cancelar(self, motivo="sin motivo"):   # cancela la reserva, el motivo es opcional
+        """Cancela la reserva si todavia no se ha procesado."""
+        if self._estado in ("CANCELADA", "PROCESADA"):   # no se puede cancelar algo ya cerrado
+            # se lanza la excepcion OperacionNoPermitidaError
+            raise OperacionNoPermitidaError(f"La reserva {self.id} ya esta {self._estado}, no se puede cancelar")
+        self._estado = "CANCELADA"           # se cambia el estado
+        logger.info(f"Reserva {self.id} cancelada. Motivo: {motivo}")   # se registra el evento en el log
+        return f"Reserva {self.id} cancelada ({motivo})"   # devuelve el texto armado
+
+    def procesar(self, pago):   # procesa el pago de la reserva
+        """Registra el pago de una reserva confirmada. Usa try / except / finally."""
+        if self._estado != "CONFIRMADA":     # solo se procesan reservas confirmadas
+            # se lanza la excepcion OperacionNoPermitidaError
+            raise OperacionNoPermitidaError(f"La reserva {self.id} esta {self._estado}, primero debe confirmarse")
+        try:   # bloque que puede generar errores
+            pago = float(pago)               # se intenta convertir el pago a numero
+        except (TypeError, ValueError) as error:     # si el pago no es un numero
+            raise DatoInvalidoError(f"El pago '{pago}' no es un valor numerico") from error   # encadenamiento
+        finally:                             # se ejecuta siempre, haya error o no
+            logger.info(f"Intento de pago registrado para {self.id}")   # se registra el evento en el log
+        if pago < self._costo:               # si el pago no alcanza
+            # se lanza la excepcion CalculoInconsistenteError
+            raise CalculoInconsistenteError(f"Pago insuficiente: se pago ${pago:,.2f} y el costo es ${self._costo:,.2f}")
+        self._estado = "PROCESADA"           # la reserva queda pagada
+        cambio = round(pago - self._costo, 2)    # se calcula el cambio
+        logger.info(f"Reserva {self.id} procesada. Cambio: ${cambio:,.2f}")   # se registra el evento en el log
+        return f"Reserva {self.id} pagada, cambio ${cambio:,.2f}"   # devuelve el texto armado
+
+    def describir(self):                     # implementacion del metodo abstracto
+        # texto del costo o aviso si aun no se calcula
+        costo = f"${self._costo:,.2f}" if self._costo else "sin calcular"
+        # devuelve el texto armado
+        return (f"Reserva {self.id}: {self._cliente.nombre} -> {self._servicio.nombre} "
+                f"({self._duracion}) | {self._estado} | costo {costo}")
+
+    def validar(self):                       # implementacion del metodo abstracto
+        return self._estado in self.ESTADOS  # la reserva es valida si su estado es uno de los permitidos
+
+
+class SistemaSoftwareFJ:   # clase que administra todo el sistema
+    """Gestor principal: guarda clientes, servicios y reservas en listas (sin base de datos)."""
+
+    def __init__(self):   # constructor del sistema, arranca con las listas vacias
+        self.clientes = []                   # lista de objetos Cliente
+        self.servicios = []                  # lista de objetos Servicio
+        self.reservas = []                   # lista de objetos Reserva
+        self.operaciones = 0                 # total de operaciones ejecutadas
+        self.exitosas = 0                    # operaciones que terminaron bien
+        self.fallidas = 0                    # operaciones que tuvieron error controlado
+        logger.info("===== Sistema Software FJ iniciado =====")   # se registra el evento en el log
+
+    def registrar_cliente(self, **datos):    # recibe los datos con nombre (nombre=..., correo=...)
+        cliente = Cliente(**datos)           # crear el cliente ya valida los datos
+        if any(c.documento == cliente.documento for c in self.clientes):   # no se permiten documentos repetidos
+            # se lanza la excepcion OperacionNoPermitidaError
+            raise OperacionNoPermitidaError(f"Ya existe un cliente con el documento {cliente.documento_oculto}")
+        self.clientes.append(cliente)        # se agrega a la lista
+        logger.info(f"Cliente registrado: {cliente.id} - {cliente.nombre}")   # se registra el evento en el log
+        return cliente   # devuelve el cliente encontrado
+
+    def agregar_servicio(self, servicio):    # agrega un servicio ya creado
+        if not isinstance(servicio, Servicio):   # solo se aceptan objetos Servicio
+            # se lanza la excepcion ServicioInvalidoError
+            raise ServicioInvalidoError("Solo se pueden agregar objetos de tipo Servicio")
+        self.servicios.append(servicio)      # se agrega a la lista
+        logger.info(f"Servicio agregado: {servicio.id} - {servicio.nombre}")   # se registra el evento en el log
+        return servicio   # devuelve el servicio agregado
+
+    @singledispatchmethod   # decorador: el metodo cambia segun el tipo del argumento (sobrecarga)
+    def buscar_cliente(self, criterio):      # version general: tipo de dato no soportado
+        # se lanza la excepcion DatoInvalidoError
+        raise DatoInvalidoError(f"No se puede buscar un cliente con un dato de tipo {type(criterio).__name__}")
+
+    @buscar_cliente.register   # registra otra version del metodo para un tipo de dato distinto
+    def _(self, criterio: str):              # "sobrecarga" 1: si llega texto se busca por id (CLI-001)
+        for cliente in self.clientes:   # se recorre la lista de clientes
+            if cliente.id == criterio.strip().upper():   # compara el id sin importar mayusculas
+                return cliente   # devuelve el cliente encontrado
+        # se lanza la excepcion DatoInvalidoError
+        raise DatoInvalidoError(f"No hay ningun cliente con id '{criterio}'")
+
+    @buscar_cliente.register   # registra otra version del metodo para un tipo de dato distinto
+    def _(self, criterio: int):              # "sobrecarga" 2: si llega un numero se busca por documento
+        for cliente in self.clientes:   # se recorre la lista de clientes
+            if cliente.documento == str(criterio):   # compara el documento como texto
+                return cliente   # devuelve el cliente encontrado
+        # se lanza la excepcion DatoInvalidoError
+        raise DatoInvalidoError(f"No hay ningun cliente con documento terminado en {str(criterio)[-4:]}")
+
+    # crea y confirma una reserva en un solo paso
+    def crear_reserva(self, cliente, servicio, duracion, confirmar=True, impuesto=True, descuento=0.0):
+        """Crea la reserva y, si se pide, la confirma. Usa el bloque completo try/except/else/finally."""
+        reserva = Reserva(cliente, servicio, duracion)   # puede lanzar ReservaInvalidaError o ParametroFaltanteError
+        if not confirmar:                    # si solo se quiere dejar pendiente
+            self.reservas.append(reserva)   # se guarda la reserva en la lista del sistema
+            return reserva   # devuelve la reserva creada
+        try:   # bloque que puede generar errores
+            reserva.confirmar(impuesto, descuento)       # se intenta confirmar
+        except ReservaInvalidaError:         # si la confirmacion falla
+            reserva.cancelar("fallo en la confirmacion")     # la reserva no queda colgada, se cancela
+            raise                            # se vuelve a lanzar el mismo error hacia arriba
+        else:   # solo se ejecuta si el try no tuvo errores
+            logger.info(f"Reserva {reserva.id} lista para pago")     # solo si se confirmo bien
+        finally:   # se ejecuta siempre, haya error o no
+            self.reservas.append(reserva)    # siempre queda en el historial, confirmada o cancelada
+        return reserva   # devuelve la reserva creada
+
+    def ejecutar(self, descripcion, operacion, *args, **kwargs):   # envoltorio que protege cualquier operacion
+        """Ejecuta cualquier operacion. Si falla, registra el error y el sistema sigue funcionando."""
+        self.operaciones += 1                # se cuenta la operacion
+        numero = self.operaciones            # numero de esta operacion
+        print(f"\nOperacion {numero:02d}: {descripcion}")   # se muestra el mensaje en pantalla
+        try:   # bloque que puede generar errores
+            resultado = operacion(*args, **kwargs)   # se ejecuta la operacion que llego como parametro
+        except SoftwareFJError as error:     # errores conocidos del sistema
+            self.fallidas += 1   # se cuenta como operacion fallida
+            causa = error.__cause__          # excepcion original si hubo encadenamiento (raise ... from)
+            # texto extra con la causa original
+            detalle = f"\n   causa original -> {type(causa).__name__}: {causa}" if causa else ""
+            # se muestra el mensaje en pantalla
+            print(f"   ERROR CONTROLADO -> {type(error).__name__}: {error}{detalle}")
+            # se registra el error en el log
+            logger.error(f"Op {numero:02d} '{descripcion}' -> {type(error).__name__}: {error}"
+                         + (f" | causa: {type(causa).__name__}: {causa}" if causa else ""))
+            return None                      # la operacion falla pero el programa NO se detiene
+        except Exception as error:           # cualquier error que no se esperaba
+            self.fallidas += 1   # se cuenta como operacion fallida
+            print(f"   ERROR INESPERADO -> {type(error).__name__}: {error}")   # se muestra el mensaje en pantalla
+            # se registra el error en el log
+            logger.critical(f"Op {numero:02d} '{descripcion}' -> error no previsto {type(error).__name__}: {error}")
+            return None                      # tampoco se detiene el programa
+        else:   # solo se ejecuta si el try no tuvo errores
+            self.exitosas += 1               # solo si no hubo errores
+            print(f"   OK -> {resultado}")   # se muestra el mensaje en pantalla
+            logger.info(f"Op {numero:02d} '{descripcion}' completada")   # se registra el evento en el log
+            return resultado   # devuelve lo que produjo la operacion
+        finally:   # se ejecuta siempre, haya error o no
+            # se registra el evento en el log
+            logger.info(f"Op {numero:02d} finalizada (exitosas: {self.exitosas}, fallidas: {self.fallidas})")
+
+    def resumen(self):                       # muestra el estado final del sistema
+        print("\n" + "=" * 70)   # linea separadora
+        print("RESUMEN DEL SISTEMA SOFTWARE FJ")   # titulo del resumen
+        print("=" * 70)   # linea separadora
+        # se muestra el mensaje en pantalla
+        print(f"Operaciones: {self.operaciones} | exitosas: {self.exitosas} | con error controlado: {self.fallidas}")
+        print(f"\nClientes ({len(self.clientes)}):")   # se muestra el mensaje en pantalla
+        for cliente in self.clientes:   # se recorre la lista de clientes
+            print("  ", cliente)             # usa describir() de Cliente
+        print(f"\nServicios ({len(self.servicios)}):")   # se muestra el mensaje en pantalla
+        for servicio in self.servicios:   # se recorre la lista de servicios
+            print("  ", servicio)            # polimorfismo: cada servicio se describe distinto
+        print(f"\nReservas ({len(self.reservas)}):")   # se muestra el mensaje en pantalla
+        for reserva in self.reservas:   # se recorre la lista de reservas
+            print("  ", reserva)   # imprime cada reserva con su describir()
+        ingresos = sum(r.costo for r in self.reservas if r.estado == "PROCESADA")   # solo cuenta las pagadas
+        print(f"\nIngresos de reservas pagadas: ${ingresos:,.2f}")   # se muestra el mensaje en pantalla
+        # se registra el evento en el log
+        logger.info(f"===== Fin de la simulacion: {self.exitosas} exitosas, {self.fallidas} fallidas =====")
