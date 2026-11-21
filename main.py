@@ -594,3 +594,140 @@ class SistemaSoftwareFJ:   # clase que administra todo el sistema
         print(f"\nIngresos de reservas pagadas: ${ingresos:,.2f}")   # se muestra el mensaje en pantalla
         # se registra el evento en el log
         logger.info(f"===== Fin de la simulacion: {self.exitosas} exitosas, {self.fallidas} fallidas =====")
+
+
+# =====================================================================
+# PARTE 5 - Simulacion de operaciones (casos validos e invalidos)
+# =====================================================================
+
+def simular():                               # funcion que corre todas las pruebas del sistema
+    """Simula mas de 10 operaciones completas mezclando casos correctos y con error."""
+    sistema = SistemaSoftwareFJ()            # se crea el sistema vacio
+
+    # ---------- Clientes ----------
+    # Op 01 (valida): cliente con todos los datos correctos, el nombre se corrige a mayusculas
+    ana = sistema.ejecutar("Registrar cliente valido (Ana)", sistema.registrar_cliente,
+                           nombre="ana maria torres", documento="1045678912",
+                           correo="ana.torres@correo.com", telefono="3004567890")
+    # Op 02 (valida): el documento llega como numero y el setter lo convierte a texto
+    carlos = sistema.ejecutar("Registrar cliente valido (Carlos)", sistema.registrar_cliente,
+                              nombre="Carlos Pertuz", documento=72345678, correo="cpertuz@correo.com")
+    # Op 03 (invalida): el nombre tiene numeros -> ClienteInvalidoError
+    sistema.ejecutar("Registrar cliente con numeros en el nombre", sistema.registrar_cliente,
+                     nombre="Luis 123", documento="1122334455", correo="luis@correo.com")
+    # Op 04 (invalida): no se envia el correo -> ParametroFaltanteError
+    sistema.ejecutar("Registrar cliente sin correo", sistema.registrar_cliente,
+                     nombre="Marta Gil", documento="99887766")
+    # Op 05 (invalida): correo sin @ -> ClienteInvalidoError
+    sistema.ejecutar("Registrar cliente con correo mal escrito", sistema.registrar_cliente,
+                     nombre="Pedro Rios", documento="55443322", correo="pedro.correo.com")
+    # Op 06 (invalida): documento que ya existe -> OperacionNoPermitidaError
+    sistema.ejecutar("Registrar cliente con documento repetido", sistema.registrar_cliente,
+                     nombre="Ana Copia", documento="1045678912", correo="copia@correo.com")
+
+    # ---------- Servicios ----------
+    # Op 07 (valida): sala para 25 personas (tiene recargo por ser grande)
+    sala = sistema.ejecutar("Crear servicio de sala", lambda: sistema.agregar_servicio(
+        ReservaSala("Sala Caribe", 45000, capacidad=25)))
+    # Op 08 (valida): alquiler de 3 portatiles
+    equipo = sistema.ejecutar("Crear servicio de alquiler de equipos", lambda: sistema.agregar_servicio(
+        AlquilerEquipo("Portatiles Core i7", 60000, "portatil", unidades=3)))
+    # Op 09 (valida): asesoria de nivel experto (tarifa x 1.5)
+    asesoria = sistema.ejecutar("Crear servicio de asesoria", lambda: sistema.agregar_servicio(
+        Asesoria("Asesoria en ciberseguridad", 120000, "Seguridad informatica", nivel="experto")))
+    # Op 10 (invalida): tarifa negativa -> ServicioInvalidoError
+    sistema.ejecutar("Crear servicio con tarifa negativa", lambda: sistema.agregar_servicio(
+        ReservaSala("Sala Norte", -30000, capacidad=10)))
+    # Op 11 (invalida): nivel que no existe -> ServicioInvalidoError
+    sistema.ejecutar("Crear asesoria con nivel inexistente", lambda: sistema.agregar_servicio(
+        Asesoria("Asesoria contable", 80000, "Contabilidad", nivel="master")))
+    # Op 12 (invalida): tarifa escrita en letras -> ServicioInvalidoError
+    sistema.ejecutar("Crear alquiler con tarifa en texto", lambda: sistema.agregar_servicio(
+        AlquilerEquipo("Videobeam", "cincuenta mil", "videobeam")))
+
+    # ---------- Polimorfismo y sobrecarga ----------
+    def cotizar():                           # funcion auxiliar para la prueba de polimorfismo
+        # cada servicio llama su propio calcular_costo_base, aunque la llamada sea la misma
+        return " | ".join(f"{s.nombre}: ${s.calcular_costo(2):,.0f}" for s in sistema.servicios)
+    # Op 13 (valida): misma llamada, resultado distinto en cada servicio
+    sistema.ejecutar("Cotizar 2 unidades de cada servicio (polimorfismo)", cotizar)
+    # Op 14 (valida): el mismo metodo llamado con 1, 2 y 3 parametros
+    sistema.ejecutar("Calcular costo de asesoria con 3 variantes (sobrecarga)", lambda: (
+        f"base ${asesoria.calcular_costo(2):,.0f} | con IVA ${asesoria.calcular_costo(2, True):,.0f} | "
+        f"con IVA y 10% desc ${asesoria.calcular_costo(2, True, 0.10):,.0f}"))
+
+    # ---------- Reservas ----------
+    # Op 15 (valida): reserva de sala por 3 horas con IVA
+    r1 = sistema.ejecutar("Reserva exitosa de sala (3 horas, con IVA)",
+                          sistema.crear_reserva, ana, sala, 3)
+    # Op 16 (valida): reserva de equipos por 7 dias con IVA y 10 % de descuento
+    r2 = sistema.ejecutar("Reserva exitosa de equipos (7 dias, IVA y 10% de descuento)",
+                          sistema.crear_reserva, carlos, equipo, 7, descuento=0.10)
+    # Op 17 (invalida): 20 horas de asesoria -> ReservaInvalidaError encadenada con ServicioInvalidoError
+    sistema.ejecutar("Reserva de asesoria por 20 horas (fuera de rango)",
+                     sistema.crear_reserva, ana, asesoria, 20)
+    # Op 18 (invalida): 2.5 dias de alquiler -> ReservaInvalidaError encadenada
+    sistema.ejecutar("Reserva de equipos por 2.5 dias (no son dias completos)",
+                     sistema.crear_reserva, carlos, equipo, 2.5)
+    # Op 19 (invalida): se manda un texto en vez de un objeto Cliente -> ReservaInvalidaError
+    sistema.ejecutar("Reserva con un cliente que no esta registrado",
+                     sistema.crear_reserva, "Cliente Fantasma", sala, 2)
+    # Op 20 (invalida): duracion vacia -> ParametroFaltanteError
+    sistema.ejecutar("Reserva sin indicar la duracion",
+                     sistema.crear_reserva, ana, sala, None)
+    # Op 21 (invalida): descuento de 150 % -> CalculoInconsistenteError, la reserva queda cancelada
+    sistema.ejecutar("Reserva con descuento del 150% (calculo inconsistente)",
+                     sistema.crear_reserva, carlos, asesoria, 2, descuento=1.5)
+
+    def cambiar_disponibilidad(servicio, valor):     # funcion auxiliar para activar o desactivar un servicio
+        servicio.disponible = valor          # usa el setter, que valida y deja registro en el log
+        return servicio.describir()          # devuelve como quedo el servicio
+    # Op 22 (valida): la sala entra en mantenimiento
+    sistema.ejecutar("Poner la sala fuera de servicio", cambiar_disponibilidad, sala, False)
+    # Op 23 (invalida): reservar la sala en mantenimiento -> ServicioNoDisponibleError encadenada
+    sistema.ejecutar("Reservar la sala que no esta disponible",
+                     sistema.crear_reserva, carlos, sala, 2)
+    # Op 24 (valida): la sala vuelve a estar disponible
+    sistema.ejecutar("Volver a habilitar la sala", cambiar_disponibilidad, sala, True)
+
+    # ---------- Procesamiento de pagos ----------
+    # Op 25 (invalida): pago en letras -> DatoInvalidoError encadenada con ValueError
+    sistema.ejecutar("Pagar reserva con texto en vez de numero", r1.procesar, "doscientos mil")
+    # Op 26 (invalida): el pago no alcanza -> CalculoInconsistenteError
+    sistema.ejecutar("Pagar reserva con dinero insuficiente", r1.procesar, 50000)
+    # Op 27 (valida): pago correcto, se calcula el cambio
+    sistema.ejecutar("Pagar reserva con el valor correcto", r1.procesar, 200000)
+    # Op 28 (invalida): no se puede cancelar algo ya pagado -> OperacionNoPermitidaError
+    sistema.ejecutar("Cancelar una reserva que ya fue pagada", r1.cancelar, "cliente se arrepintio")
+    # Op 29 (valida): pago exacto de la reserva de equipos
+    sistema.ejecutar("Pagar reserva de equipos", r2.procesar, r2.costo)
+
+    # Op 30 (valida): reserva que se deja pendiente sin confirmar
+    r3 = sistema.ejecutar("Dejar una reserva de asesoria pendiente",
+                          sistema.crear_reserva, ana, asesoria, 1.5, confirmar=False)
+    # Op 31 (invalida): pagar sin confirmar -> OperacionNoPermitidaError
+    sistema.ejecutar("Pagar una reserva que no esta confirmada", r3.procesar, 300000)
+    # Op 32 (valida): cancelacion normal de una reserva pendiente
+    sistema.ejecutar("Cancelar la reserva pendiente", r3.cancelar, "cambio de fecha")
+    # Op 33 (invalida): confirmar algo cancelado -> OperacionNoPermitidaError
+    sistema.ejecutar("Confirmar una reserva que ya fue cancelada", r3.confirmar)
+
+    # ---------- Busquedas (sobrecarga por tipo de dato) ----------
+    # Op 34 (valida): si llega un entero se busca por documento
+    sistema.ejecutar("Buscar cliente por documento (numero)", sistema.buscar_cliente, 72345678)
+    # Op 35 (valida): si llega texto se busca por id
+    sistema.ejecutar("Buscar cliente por id (texto)", sistema.buscar_cliente, "cli-001")
+    # Op 36 (invalida): un decimal no es un tipo soportado -> DatoInvalidoError
+    sistema.ejecutar("Buscar cliente con un dato decimal", sistema.buscar_cliente, 3.14)
+
+    # ---------- Error no previsto ----------
+    # Op 37 (invalida): IndexError de Python, lo atrapa el except Exception y el sistema sigue
+    sistema.ejecutar("Consultar una posicion que no existe en la lista", lambda: sistema.clientes[50])
+
+    sistema.resumen()                        # al final se muestra el estado del sistema
+    return sistema                           # se devuelve por si se quiere seguir usando
+
+
+if __name__ == "__main__":                   # solo se ejecuta si se corre este archivo directamente
+    simular()                                # se ejecuta la simulacion completa
+    print(f"\nRevise el archivo '{ARCHIVO_LOG}' para ver todos los eventos y errores registrados.")   # aviso final
